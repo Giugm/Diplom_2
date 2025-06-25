@@ -1,93 +1,77 @@
 package praktikum.user;
 
-import io.qameta.allure.junit4.AllureJunit4;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import io.restassured.response.Response;
 import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runner.notification.Failure;
 import praktikum.helpers.UserClient;
 import praktikum.helpers.UserGenerator;
+import praktikum.models.User;
 
-import java.util.HashMap;
-import java.util.Map;
+import static org.hamcrest.Matchers.equalTo;
 
-import static org.hamcrest.Matchers.*;
-
+@Epic("Пользователь")
+@Feature("Регистрация: POST /api/auth/register")
 public class UserRegistrationTest {
-    String accessToken;
 
-    @Rule
-    public TestWatcher allure = new TestWatcher() {
-        private final AllureJunit4 delegate = new AllureJunit4();
-
-        @Override
-        protected void starting(Description description) {
-            delegate.testStarted(description);
-            super.starting(description);
-        }
-
-        @Override
-        protected void succeeded(Description description) {
-            delegate.testFinished(description);
-            super.succeeded(description);
-        }
-
-        @Override
-        protected void failed(Throwable e, Description description) {
-            delegate.testFailure(new Failure(description, e));
-            super.failed(e, description);
-        }
-    };
+    private String accessToken;
 
     @After
-    public void cleanUp() {
-        if (accessToken != null) {
+    public void tearDown() {
+        // Удаляем пользователя, если он был создан
+        if (accessToken != null && !accessToken.isEmpty()) {
             UserClient.deleteUser(accessToken);
+            accessToken = null; // Сбрасываем токен
         }
     }
 
     @Test
-    public void createNewUser_success() {
-        Map<String, String> user = new HashMap<>();
-        user.put("email", UserGenerator.randomEmail());
-        user.put("password", UserGenerator.randomPassword());
-        user.put("name", UserGenerator.randomName());
+    @Story("Успешная регистрация")
+    @Description("Проверка успешного создания нового уникального пользователя")
+    public void registerNewUserIsSuccessful() {
+        // Используем POJO User
+        User user = UserGenerator.randomUser();
 
         Response response = UserClient.registerUser(user);
+        // Сохраняем токен для последующей очистки
         accessToken = response.then().extract().path("accessToken");
 
         response.then().statusCode(200)
-                .body("success", is(true));
+                .and().body("success", equalTo(true));
     }
 
     @Test
-    public void createUser_existingUser() {
-        Map<String, String> user = new HashMap<>();
-        user.put("email", "test@test.com");
-        user.put("password", "123456");
-        user.put("name", "Test");
+    @Story("Регистрация существующего пользователя")
+    @Description("Проверка, что нельзя создать пользователя, который уже существует")
+    public void registerExistingUserReturnsError() {
+        // Генерируем случайного пользователя
+        User user = UserGenerator.randomUser();
 
-        UserClient.registerUser(user); // регистрация 1 раз
-        Response response = UserClient.registerUser(user); // повторная регистрация
+        // Первая (успешная) регистрация
+        Response firstResponse = UserClient.registerUser(user);
+        accessToken = firstResponse.then().extract().path("accessToken");
 
-        response.then().statusCode(403)
-                .body("message", containsString("already exists"));
+        // Повторная регистрация того же пользователя
+        Response secondResponse = UserClient.registerUser(user);
+
+        secondResponse.then().statusCode(403)
+                .and().body("message", equalTo("User already exists"));
     }
 
     @Test
-    public void createUser_missingField() {
-        Map<String, String> user = new HashMap<>();
-        user.put("email", UserGenerator.randomEmail());
-        user.put("password", ""); // отсутствие обязательного поля
+    @Story("Регистрация без обязательного поля")
+    @Description("Проверка, что нельзя создать пользователя без одного из обязательных полей (пароля)")
+    public void registerUserWithoutRequiredFieldReturnsError() {
+        User user = UserGenerator.randomUser();
+        user.setPassword(null); // Не заполняем обязательное поле
 
         Response response = UserClient.registerUser(user);
 
         response.then().statusCode(403)
-                .body("message", containsString("required fields"));
+                .and().body("message", equalTo("Email, password and name are required fields"));
     }
 }
-
 

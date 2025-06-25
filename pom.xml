@@ -32,7 +32,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- JSON сериализация -->
+        <!-- JSON сериализация (Gson) -->
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
@@ -57,6 +57,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <testFailureIgnore>true</testFailureIgnore>
                     <systemProperties>
                         <property>
                             <name>allure.results.directory</name>

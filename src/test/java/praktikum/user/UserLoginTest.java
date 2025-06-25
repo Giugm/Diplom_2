@@ -1,84 +1,68 @@
 package praktikum.user;
 
-import io.qameta.allure.junit4.AllureJunit4;
+import io.qameta.allure.Description;
+import io.qameta.allure.Epic;
+import io.qameta.allure.Feature;
+import io.qameta.allure.Story;
 import io.restassured.response.Response;
+import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-import org.junit.runner.notification.Failure;
 import praktikum.helpers.UserClient;
 import praktikum.helpers.UserGenerator;
-
-import java.util.HashMap;
-import java.util.Map;
+import praktikum.models.Credentials;
+import praktikum.models.User;
 
 import static org.hamcrest.Matchers.*;
 
+@Epic("Пользователь")
+@Feature("Логин: POST /api/auth/login")
 public class UserLoginTest {
 
-    @Rule
-    public TestWatcher allure = new TestWatcher() {
-        private final AllureJunit4 delegate = new AllureJunit4();
-
-        @Override
-        protected void starting(Description description) {
-            delegate.testStarted(description);
-            super.starting(description);
-        }
-
-        @Override
-        protected void succeeded(Description description) {
-            delegate.testFinished(description);
-            super.succeeded(description);
-        }
-
-        @Override
-        protected void failed(Throwable e, Description description) {
-            delegate.testFailure(new Failure(description, e));
-            super.failed(e, description);
-        }
-    };
-
-    private String email;
-    private String password;
+    private User user;
+    private String accessToken;
 
     @Before
     public void setUp() {
-        email = UserGenerator.randomEmail();
-        password = UserGenerator.randomPassword();
+        // Создаем пользователя перед каждым тестом
+        user = UserGenerator.randomUser();
+        Response registerResponse = UserClient.registerUser(user);
+        // Сохраняем токен, чтобы потом удалить пользователя
+        accessToken = registerResponse.then().extract().body().path("accessToken");
+    }
 
-        Map<String, String> user = new HashMap<>();
-        user.put("email", email);
-        user.put("password", password);
-        user.put("name", UserGenerator.randomName());
-
-        UserClient.registerUser(user);
+    @After
+    public void tearDown() {
+        // Удаляем пользователя после каждого теста
+        if (accessToken != null && !accessToken.isEmpty()) {
+            UserClient.deleteUser(accessToken);
+        }
     }
 
     @Test
-    public void login_success() {
-        Map<String, String> creds = new HashMap<>();
-        creds.put("email", email);
-        creds.put("password", password);
+    @Story("Успешный логин")
+    @Description("Проверка логина с корректными учетными данными")
+    public void loginWithValidCredentialsIsSuccessful() {
+        // Создаем объект Credentials из нашего пользователя
+        Credentials credentials = Credentials.from(user);
+        Response response = UserClient.loginUser(credentials);
 
-        Response response = UserClient.loginUser(creds);
         response.then().statusCode(200)
-                .body("accessToken", notNullValue())
-                .body("user.email", equalTo(email));
+                .and().body("success", is(true))
+                .and().body("accessToken", notNullValue())
+                .and().body("user.email", equalTo(user.getEmail().toLowerCase()));
     }
 
     @Test
-    public void login_invalidCredentials() {
-        Map<String, String> creds = new HashMap<>();
-        creds.put("email", email);
-        creds.put("password", "wrongpass");
+    @Story("Логин с неверными учетными данными")
+    @Description("Проверка логина с неправильным паролем")
+    public void loginWithInvalidCredentialsReturnsError() {
+        // Используем правильный email, но неверный пароль
+        Credentials credentials = new Credentials(user.getEmail(), "wrongpass");
+        Response response = UserClient.loginUser(credentials);
 
-        Response response = UserClient.loginUser(creds);
         response.then().statusCode(401)
-                .body("message", containsString("incorrect"));
+                .and().body("message", equalTo("email or password are incorrect"));
     }
 }
-
 
