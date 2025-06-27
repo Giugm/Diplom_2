@@ -8,8 +8,6 @@ import io.restassured.specification.RequestSpecification;
 import static io.restassured.RestAssured.given;
 
 public class ApiClient {
-    // Gson для сериализации объектов в JSON
-    private static final Gson gson = new Gson();
 
     static {
         RestAssured.baseURI = "https://stellarburgers.nomoreparties.site";
@@ -23,7 +21,7 @@ public class ApiClient {
     // POST запрос без авторизации
     public static Response post(String path, Object body) {
         return prepareRequest()
-                .body(gson.toJson(body))
+                .body(body)
                 .post(path);
     }
 
@@ -31,7 +29,7 @@ public class ApiClient {
     public static Response post(String path, Object body, String token) {
         return prepareRequest()
                 .header("Authorization", token)
-                .body(gson.toJson(body))
+                .body(body)
                 .post(path);
     }
 
@@ -39,14 +37,14 @@ public class ApiClient {
     public static Response patch(String path, Object body, String token) {
         return prepareRequest()
                 .header("Authorization", token)
-                .body(gson.toJson(body))
+                .body(body)
                 .patch(path);
     }
 
     // PATCH запрос без авторизации
     public static Response patch(String path, Object body) {
         return prepareRequest()
-                .body(gson.toJson(body))
+                .body(body)
                 .patch(path);
     }
 

@@ -64,5 +64,16 @@ public class UserLoginTest {
         response.then().statusCode(401)
                 .and().body("message", equalTo("email or password are incorrect"));
     }
+    @Test
+    @Story("Логин с неверным email")
+    @Description("Проверка, что система возвращает ошибку при логине с несуществующим email")
+    public void loginWithInvalidEmailReturnsError() {
+        // Используем неверный email, но правильный пароль
+        Credentials credentials = new Credentials("invalid-" + user.getEmail(), user.getPassword());
+        Response response = UserClient.loginUser(credentials);
+
+        response.then().statusCode(401)
+                .and().body("message", equalTo("email or password are incorrect"));
+    }
 }
 

@@ -62,11 +62,37 @@ public class UserRegistrationTest {
     }
 
     @Test
-    @Story("Регистрация без обязательного поля")
-    @Description("Проверка, что нельзя создать пользователя без одного из обязательных полей (пароля)")
-    public void registerUserWithoutRequiredFieldReturnsError() {
+    @Story("Регистрация без email")
+    @Description("Проверка, что нельзя создать пользователя без email")
+    public void registerUserWithoutEmailReturnsError() {
         User user = UserGenerator.randomUser();
-        user.setPassword(null); // Не заполняем обязательное поле
+        user.setEmail(null); // Устанавливаем email в null
+
+        Response response = UserClient.registerUser(user);
+
+        response.then().statusCode(403)
+                .and().body("message", equalTo("Email, password and name are required fields"));
+    }
+
+    @Test
+    @Story("Регистрация без пароля")
+    @Description("Проверка, что нельзя создать пользователя без пароля")
+    public void registerUserWithoutPasswordReturnsError() {
+        User user = UserGenerator.randomUser();
+        user.setPassword(null); // Устанавливаем пароль в null
+
+        Response response = UserClient.registerUser(user);
+
+        response.then().statusCode(403)
+                .and().body("message", equalTo("Email, password and name are required fields"));
+    }
+
+    @Test
+    @Story("Регистрация без имени")
+    @Description("Проверка, что нельзя создать пользователя без имени")
+    public void registerUserWithoutNameReturnsError() {
+        User user = UserGenerator.randomUser();
+        user.setName(null); // Устанавливаем имя в null
 
         Response response = UserClient.registerUser(user);
 
